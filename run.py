@@ -146,13 +146,15 @@ def main():
 
     restored = False
     if os.path.isfile('./temp/backup.pkl'):
-        conf_, year_, authors, titles, links, start_idx_, citations, etc = restore_checkpoint()
+        conf_, year_, authors, titles, links, start_idx_, citations_, etc_ = restore_checkpoint()
 
         if conference == conf_ and year == year_:
             restored = query_yes_no("Restore from backup? {} {} {}/{} papers done.".format(conf_, year_, start_idx_, len(authors)))
 
     if restored:
         start_idx = start_idx_
+        citations = citations_
+        etc = etc_
 
     else:
         print("Loading {} {} results".format(conference, year))
