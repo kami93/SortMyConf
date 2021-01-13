@@ -8,7 +8,7 @@ SortMyConf generates a sorted list of papers at an AI/ML top-tier conference. It
 # Usage
 
 ## Environment Setup
-First, you need a Python 3 environment to run this program. Once you have the environment on your system, install the following dependencies: beautifulsoup4, pandas, selenium.
+First, you need a Python 3 environment to run this program. Once you have the environment on your system, install the following dependencies: beautifulsoup4, pandas, selenium, tqdm.
 ```
 pip install -r requirements.txt
 ```
