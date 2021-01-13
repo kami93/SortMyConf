@@ -1,3 +1,4 @@
+chromedriver_autoinstaller
 beautifulsoup4
 pandas
 selenium

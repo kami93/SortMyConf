@@ -92,9 +92,12 @@ def setup_driver():
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from selenium.common.exceptions import StaleElementReferenceException
+        import chromedriver_autoinstaller
+        chromedriver_autoinstaller.install()
+
     except Exception as e:
         print(e)
-        print("Please install Selenium and chrome webdriver for manual checking of captchas")
+        print("Please install selenium and chromedriver_autoinstaller.")
 
     print('Loading...')
     chrome_options = Options()
