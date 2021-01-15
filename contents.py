@@ -1,4 +1,5 @@
 import re
+import time
 
 from bs4 import BeautifulSoup
 import requests
@@ -73,7 +74,8 @@ def get_papers_list(conference, year):
                        'ICLR': get_iclr,
                        'ICML': get_icml,
                        'ECCV': get_eccv,
-                       'NeurIPS': get_nips}
+                       'NeurIPS': get_nips,
+                       'ICRA': get_icra}
     
     return conference_dict[conference](year)
 
@@ -146,6 +148,45 @@ def get_iccv(year):
 
     return authors, titles, links
 
+def get_icra(year):
+    '''
+    ICRA papers parser.
+    This gathers a list of titles, authors, links for ICRA papers at the DBLP library.
+    '''
+    if year < 1984 or year > 2020:
+        raise ValueError("Year must be in [2013, ..., 2020] for ICLR.")
+    
+    authors = []
+    titles = []
+    links = []
+    
+    first = 0
+    total = 1
+    while first < total: # DBLP returns 1,000 papers at a query. Repeat queries until every papers are collected.
+        results =  requests.get("https://dblp.org/search/publ/api?q=toc%3Adb/conf/icra/icra{}.bht%3A&f={}&h=1000&format=json".format(year, first)).json()
+        
+        papers = results['result']['hits']['hit']
+        for paper in papers:
+            if 'authors' not in paper['info'].keys():
+                # No author: This object describes the ICLR conference itself.
+                continue
+
+            if type(paper['info']['authors']['author']) == dict:
+                # A single author case.
+                authors.append(removeDigits(paper['info']['authors']['author']['text']).strip())
+            
+            else:
+                # Multiple authors case.
+                authors.append(', '.join(removeDigits(i['text']).strip() for i in paper['info']['authors']['author']))
+
+            titles.append(paper['info']['title'])
+            links.append(paper['info']['ee'])
+        
+        first += 1000
+        total = int(results['result']['hits']['@total'])
+    
+    return authors, titles, links
+
 def get_iclr(year):
     '''
     ICLR papers parser.
@@ -158,11 +199,10 @@ def get_iclr(year):
     titles = []
     links = []
 
-    
     first = 0
     total = 1
     while first < total: # DBLP returns 1,000 papers at a query. Repeat queries until every papers are collected.
-        results =  request.get("https://dblp.org/search/publ/api?q=toc%3Adb/conf/iclr/iclr{}.bht%3A&f={}&h=1000&format=json".format(year, first)).json()
+        results =  requests.get("https://dblp.org/search/publ/api?q=toc%3Adb/conf/iclr/iclr{}.bht%3A&f={}&h=1000&format=json".format(year, first)).json()
         
         papers = results['result']['hits']['hit']
         for paper in papers:
@@ -203,22 +243,21 @@ def get_eccv(year):
     if year not in [int(1990 + 2*x) for x in range(16)]:
             raise ValueError("Year must be in [1990, 1992, 1994, ..., 2020] for ECCV.")
     
-    session = requests.Session()
-    page = session.get("https://dblp.org/db/conf/eccv/index.html") # DBLP page for ECCV proceedings.
+    page = requests.get("https://dblp.org/db/conf/eccv/index.html") # DBLP page for ECCV proceedings.
     soup = BeautifulSoup(page.content, 'html.parser')
     year_soup = soup.select("li[id^='conf/eccv/{}']".format(year)) # Gather ECCV proceedings at year.
 
     def get_proc(proc_link, results):
-        session_ = requests.Session()
-        with session_.get(proc_link) as page:
-            proc_soup = BeautifulSoup(page.content, 'html.parser')
-            paper_soup = proc_soup.select("li.chapter-item.content-type-list__item") # Rows of papers
+        page = requests.get(proc_link)
 
-            authors = [i.select_one("div.content-type-list__text[data-test='author-text']").text for i in paper_soup]
-            titles = [i.select_one("a.content-type-list__link.u-interface-link").text for i in paper_soup]
-            links = ["https://link.springer.com{}".format(i.select_one("a.content-type-list__link.u-interface-link").get("href")) for i in paper_soup]
+        proc_soup = BeautifulSoup(page.content, 'html.parser')
+        paper_soup = proc_soup.select("li.chapter-item.content-type-list__item") # Rows of papers
 
-            results.append([authors, titles, links])
+        authors = [i.select_one("div.content-type-list__text[data-test='author-text']").text for i in paper_soup]
+        titles = [i.select_one("a.content-type-list__link.u-interface-link").text for i in paper_soup]
+        links = ["https://link.springer.com{}".format(i.select_one("a.content-type-list__link.u-interface-link").get("href")) for i in paper_soup]
+
+        results.append([authors, titles, links])
 
     results = []
     ths = []
@@ -257,7 +296,7 @@ def get_icml(year):
                  2014: 'v32',
                  2013: 'v28'}
 
-    page = session.get('http://proceedings.mlr.press/{}'.format(pmlr_dict[year]))
+    page = requests.get('http://proceedings.mlr.press/{}'.format(pmlr_dict[year]))
     soup = BeautifulSoup(page.content, 'html.parser')
 
     authors = [i.select('span.authors')[0].text.replace(u'\xa0', u' ') for i in soup.select('p.details')]
@@ -274,7 +313,7 @@ def get_nips(year):
     if year < 1987 or year > 2020:
         raise ValueError("Year must be in [1987, ..., 2020] for NeurIPS.")
 
-    page = session.get('https://papers.nips.cc/paper/{}'.format(year))
+    page = requests.get('https://papers.nips.cc/paper/{}'.format(year))
     soup = BeautifulSoup(page.content, 'html.parser')
 
     list_papers_soup = soup.select("ul")[1].select("li") # Rows containing each paper.

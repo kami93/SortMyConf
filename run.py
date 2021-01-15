@@ -32,6 +32,7 @@ def get_command_line_args():
                        'iclr': 'ICLR',
                        'icml': 'ICML',
                        'eccv': 'ECCV',
+                       'icra': 'ICRA',
                        'nips': 'NeurIPS',
                        'neurips': 'NeurIPS'}
     if args.conference.lower() not in conference_dict.keys():
@@ -163,13 +164,14 @@ def main():
         print("Loading {} {} results".format(conference, year))
         authors, titles, links = get_papers_list(conference, year)
         print("Found {:d} papers.".format(len(authors)))
-    
+
     driver = setup_driver() # Load chrome driver
     for idx in tqdm(range(start_idx, len(authors)), total=len(authors), initial=start_idx):
         title = titles[idx]
         link = links[idx]
 
-        url = GSCHOLAR_URL.format(link.replace(':', '%3A').replace('/', '%2F'))
+        query = link.replace("https://doi.org/", "").replace(':', '%3A').replace('/', '%2F')
+        url = GSCHOLAR_URL.format(query)
         driver.get(url)
 
         while(len(citations) != idx+1):
@@ -220,16 +222,17 @@ def main():
                 else:
                     raise GScholarError()
                 
-                url = GSCHOLAR_URL.format(link.replace(':', '%3A').replace('/', '%2F'))
+                url = GSCHOLAR_URL.format(query)
                 driver.get(url)
                 
             except SearchError:
                 # No Search Results. Case (3).
-                new_url = GSCHOLAR_URL.format("\""+title.replace(' ', '+')+"\"")
-                if url != new_url:
+                new_query = "\""+title.replace(' ', '+')+"\""
+                if query != new_query:
                     print("Warning: No search result with link for \"{}\"".format(title))
                     print("Retrying Search with the title...")
-                    url = new_url
+                    query = new_query
+                    url = GSCHOLAR_URL.format(query)
                     driver.get(url)
 
                 else:
